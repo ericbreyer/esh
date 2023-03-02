@@ -292,7 +292,31 @@ eval(const char *cmdline)
 	if(builtin_cmd(argv))
 		return;
 
+	int childPID = 0;
+	sigset_t mask_all, mask_one, prev_one;
+
+	sigfillset(&mask_all);
+	sigemptyset(&mask_one);
+	sigaddset(&mask_one, SIGCHLD);
+	// signal(SIGCHLD, sigchld_handler)
+	initjobs(jobs);
+
+	if(argv[0][0] == '.' || argv[0][0] == '/') {
+		sigprocmask(SIG_BLOCK, &mask_one, &prev_one);
+		if((childPID = fork()) == 0) { //child
+			setpgid(0,0);
+			sigprocmask(SIG_SETMASK, &prev_one, NULL);
+			execve(argv[0], argv, NULL);
+		}
+		sigprocmask(SIG_BLOCK, &mask_all, NULL);
+		addjob(jobs, childPID, FG, cmdline);
+		sigprocmask(SIG_SETMASK, &prev_one, NULL);
+	}
+
+
 }
+
+
 
 /* 
  * parseline - Parse the command line and build the argv array.
