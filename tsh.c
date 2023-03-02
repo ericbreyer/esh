@@ -284,8 +284,14 @@ static void
 eval(const char *cmdline) 
 {
 
-	// Prevent an "unused parameter" warning.  REMOVE THIS STATEMENT!
-	(void)cmdline;
+	char ** argv = malloc(MAXARGS * sizeof(char*));
+	bool bg = parseline(cmdline, argv);
+	(void) bg;
+	
+
+	if(builtin_cmd(argv))
+		return;
+
 }
 
 /* 
@@ -375,8 +381,18 @@ static bool
 builtin_cmd(char **argv) 
 {
 
-	// Prevent an "unused parameter" warning.  REMOVE THIS STATEMENT!
-	(void)argv;
+
+	if(strcmp(argv[0], "quit") == 0){
+		exit(0);
+		return(true);
+	}
+	else if(strcmp(argv[0], "jobs") == 0){
+		listjobs(jobs);
+		return(true);
+	}
+	else if(strcmp(argv[0], "bg") == 0 || strcmp(argv[0], "fg") == 0)
+		return(true);
+
 	return (false);     // This is not a built-in command.
 }
 
