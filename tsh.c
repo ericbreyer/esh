@@ -430,6 +430,8 @@ waitfg(pid_t pid)
 	(void)pid;
 }
 
+char ** pathDirs;
+
 /* 
  * initpath - Perform all necessary initialization of the search path,
  *  which may be simply saving the path.
@@ -443,9 +445,20 @@ waitfg(pid_t pid)
 static void
 initpath(const char *pathstr)
 {
+	int colons = 0;
+	for(unsigned int i = 0; i < strlen(pathstr); ++i) {
+		if(pathstr[i] == ':') ++colons;
+	}
 
-	// Prevent an "unused parameter" warning.  REMOVE THIS STATEMENT!
-	(void)pathstr;
+	pathDirs = malloc(sizeof *pathDirs * (colons + 1));
+
+	int pos = 0;
+	char * tok = strtok((char *)pathstr, ":");
+	while (tok != NULL) {
+		tok = strtok(NULL, ":");
+		pathDirs[pos] = tok;
+		++pos;
+	}
 }
 
 /*
