@@ -311,8 +311,8 @@ eval(const char *cmdline)
 		sigprocmask(SIG_BLOCK, &mask_all, NULL);
 		addjob(jobs, childPID, FG, cmdline);
 		sigprocmask(SIG_SETMASK, &prev_one, NULL);
+		while(getjobpid(jobs,childPID) != NULL);
 	}
-
 
 }
 
@@ -505,9 +505,20 @@ initpath(const char *pathstr)
 static void
 sigchld_handler(int signum)
 {
-
-	// Prevent an "unused parameter" warning.
-	(void)signum;
+	(void) signum;
+	int olderrno = errno;
+	sigset_t mask_all, prev_all;
+	pid_t pid;
+	
+	sigfillset(&mask_all);
+	while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) { /* Reap a zombie child */
+		sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
+		deletejob(jobs, pid); /* Delete the child from the job list */
+		sigprocmask(SIG_SETMASK, &prev_all, NULL);
+	}
+	if (errno != ECHILD)
+		Sio_error("waitpid error");
+	errno = olderrno;
 }
 
 /* 
