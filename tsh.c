@@ -299,7 +299,7 @@ eval(const char *cmdline)
 	sigemptyset(&mask_one);
 	sigaddset(&mask_one, SIGCHLD);
 	// signal(SIGCHLD, sigchld_handler)
-	initjobs(jobs);
+	// initjobs(jobs);
 
 	if(argv[0][0] == '.' || argv[0][0] == '/') {
 		sigprocmask(SIG_BLOCK, &mask_one, &prev_one);
@@ -309,7 +309,7 @@ eval(const char *cmdline)
 			execve(argv[0], argv, NULL);
 		}
 		sigprocmask(SIG_BLOCK, &mask_all, NULL);
-		addjob(jobs, childPID, FG, cmdline);
+		addjob(jobs, childPID, bg ? BG : FG, cmdline);
 		sigprocmask(SIG_SETMASK, &prev_one, NULL);
 		waitfg(childPID);
 	}
@@ -524,7 +524,6 @@ sigchld_handler(int signum)
 			deletejob(jobs, pid); /* Delete the child from the job list */
 		}
 		if (WIFSIGNALED(status)) {
-			
 			Sio_puts("Job [");
 			Sio_putl(pid2jid(pid));
 			Sio_puts("] (");
@@ -537,10 +536,9 @@ sigchld_handler(int signum)
 		if(WIFSTOPPED(status)) {
 			JobP stoppedJob = getjobpid(jobs, pid);
 			stoppedJob->state = ST;
-			Sio_puts("IN HERE");
 		}
 		// sigprocmask(SIG_SETMASK, &prev_all, NULL);
-
+		status = 0;
 	}
 	// if (errno != ECHILD) {
 	// 	Sio_error("waitpid error");
