@@ -106,12 +106,12 @@ static const char *const signame[NSIG] = {
 static bool	builtin_cmd(char **argv);
 static void	do_bgfg(char **argv);
 static void	eval(const char *cmdline);
-static void	initpath(const char *pathstr);
-static void	waitfg(pid_t pid);
+static void	initpath(const char *pathstr); //
+static void	waitfg(pid_t pid); //
 
-static void	sigchld_handler(int signum);
-static void	sigint_handler(int signum);
-static void	sigtstp_handler(int signum);
+static void	sigchld_handler(int signum); //
+static void	sigint_handler(int signum); //
+static void	sigtstp_handler(int signum); //
 
 // We are providing the following functions to you:
 
@@ -509,6 +509,7 @@ sigchld_handler(int signum)
 {
 	(void) signum;
 	int olderrno = errno;
+	errno = ECHILD;
 	// sigset_t mask_all, prev_all;
 	pid_t pid;
 	int status;
@@ -523,7 +524,6 @@ sigchld_handler(int signum)
 			deletejob(jobs, pid); /* Delete the child from the job list */
 		}
 		if (WIFSIGNALED(status)) {
-			char * out = malloc(sizeof *out * 100);
 			Sio_puts("Job [");
 			Sio_putl(pid2jid(pid));
 			Sio_puts("] (");
@@ -531,14 +531,12 @@ sigchld_handler(int signum)
 			Sio_puts(") terminated by signal SIG");
 			Sio_puts(signame[WTERMSIG(status)]);
 			Sio_puts("\n");
-			free(out);
 			deletejob(jobs, pid); /* Delete the child from the job list */
 		}
 		if(WIFSTOPPED(status)) {
 			JobP stoppedJob = getjobpid(jobs, pid);
 			stoppedJob->state = ST;
 		}
-		// sigprocmask(SIG_SETMASK, &prev_all, NULL);
 	}
 	if (errno != ECHILD)
 		Sio_error("waitpid error");
