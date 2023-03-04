@@ -192,7 +192,7 @@ main(int argc, char **argv)
 	 */
 	action.sa_handler = sigint_handler;
 	action.sa_flags = SA_RESTART;
-	if (sigemptyset(&action.sa_mask) < 0)
+	if (sigfillset(&action.sa_mask) < 0)
 		unix_error("sigemptyset error");
 	if (sigaction(SIGINT, &action, NULL) < 0)
 		unix_error("sigaction error");
@@ -204,7 +204,7 @@ main(int argc, char **argv)
 	 */
 	action.sa_handler = sigtstp_handler;
 	action.sa_flags = SA_RESTART;
-	if (sigemptyset(&action.sa_mask) < 0)
+	if (sigfillset(&action.sa_mask) < 0)
 		unix_error("sigemptyset error");
 	if (sigaction(SIGTSTP, &action, NULL) < 0)
 		unix_error("sigaction error");
@@ -216,7 +216,7 @@ main(int argc, char **argv)
 	 */
 	action.sa_handler = sigchld_handler;
 	action.sa_flags = SA_RESTART;
-	if (sigemptyset(&action.sa_mask) < 0)
+	if (sigfillset(&action.sa_mask) < 0)
 		unix_error("sigemptyset error");
 	if (sigaction(SIGCHLD, &action, NULL) < 0)
 		unix_error("sigaction error");
@@ -229,7 +229,7 @@ main(int argc, char **argv)
 	 */
 	action.sa_handler = sigquit_handler;
 	action.sa_flags = SA_RESTART;
-	if (sigemptyset(&action.sa_mask) < 0)
+	if (sigfillset(&action.sa_mask) < 0)
 		unix_error("sigemptyset error");
 	if (sigaction(SIGQUIT, &action, NULL) < 0)
 		unix_error("sigaction error");
@@ -562,6 +562,10 @@ sigint_handler(int signum)
 
 	// Prevent an "unused parameter" warning.
 	(void)signum;
+	//Sio_puts("Caught SIGINT!\n"); /* Safe output */
+	kill(fgpid(jobs), SIGINT);
+	exit(0); /* Safe exit */
+
 }
 
 /*
@@ -599,7 +603,6 @@ sigquit_handler(int signum)
 
 	// Prevent an "unused parameter" warning.
 	(void)signum;
-	Sio_puts("Terminating after receipt of SIGQUIT signal\n");
 	_exit(1);
 }
 
