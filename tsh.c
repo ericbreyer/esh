@@ -509,16 +509,16 @@ sigchld_handler(int signum)
 {
 	(void) signum;
 	int olderrno = errno;
-	sigset_t mask_all, prev_all;
+	// sigset_t mask_all, prev_all;
 	pid_t pid;
 	int status;
-	sigfillset(&mask_all);
+	// sigfillset(&mask_all);
 	// while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) { /* Reap a zombie child */
 	while ((pid = waitpid(-1, &status, WUNTRACED | WNOHANG)) > 0) { /* Reap a zombie child */
 		// TODO: CHWCK FOR WIFESTOPPED OR EXITED OR WHATEVS
 		// if stopped update status
 		// if terminated remove it
-		sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
+		// sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
 		if (WIFEXITED(status)) {
 			deletejob(jobs, pid); /* Delete the child from the job list */
 		}
@@ -528,7 +528,7 @@ sigchld_handler(int signum)
 			Sio_putl(pid2jid(pid));
 			Sio_puts("] (");
 			Sio_putl(pid);
-			Sio_puts("terminated by signal ");
+			Sio_puts(") terminated by signal SIG");
 			Sio_puts(signame[WTERMSIG(status)]);
 			Sio_puts("\n");
 			free(out);
@@ -538,7 +538,7 @@ sigchld_handler(int signum)
 			JobP stoppedJob = getjobpid(jobs, pid);
 			stoppedJob->state = ST;
 		}
-		sigprocmask(SIG_SETMASK, &prev_all, NULL);
+		// sigprocmask(SIG_SETMASK, &prev_all, NULL);
 	}
 	if (errno != ECHILD)
 		Sio_error("waitpid error");
@@ -562,10 +562,10 @@ sigint_handler(int signum)
 
 	// Prevent an "unused parameter" warning.
 	(void)signum;
-	//Sio_puts("Caught SIGINT!\n"); /* Safe output */
-	kill(fgpid(jobs), SIGINT);
-	exit(0); /* Safe exit */
-
+	int pid;
+	if((pid = -fgpid(jobs)) != 0) {
+		kill(pid, SIGINT);
+	}
 }
 
 /*
