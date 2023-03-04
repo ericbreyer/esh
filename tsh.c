@@ -534,6 +534,13 @@ sigchld_handler(int signum)
 			deletejob(jobs, pid); /* Delete the child from the job list */
 		}
 		if(WIFSTOPPED(status)) {
+			Sio_puts("Job [");
+			Sio_putl(pid2jid(pid));
+			Sio_puts("] (");
+			Sio_putl(pid);
+			Sio_puts(") terminated by signal SIG");
+			Sio_puts(signame[WSTOPSIG(status)]);
+			Sio_puts("\n");
 			JobP stoppedJob = getjobpid(jobs, pid);
 			stoppedJob->state = ST;
 		}
@@ -802,7 +809,7 @@ getjobjid(JobP jobs, int jid)
  *   job exists.
  */
 static int
-pid2jid(pid_t pid) 
+ pid2jid(pid_t pid) 
 {
 	int i;
 
