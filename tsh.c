@@ -585,6 +585,10 @@ sigtstp_handler(int signum)
 
 	// Prevent an "unused parameter" warning.
 	(void)signum;
+	int pid;
+	if((pid = -fgpid(jobs)) != 0) {
+		kill(pid, SIGTSTP);
+	}
 }
 
 /*
