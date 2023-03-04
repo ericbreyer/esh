@@ -311,7 +311,7 @@ eval(const char *cmdline)
 		sigprocmask(SIG_BLOCK, &mask_all, NULL);
 		addjob(jobs, childPID, FG, cmdline);
 		sigprocmask(SIG_SETMASK, &prev_one, NULL);
-		while(getjobpid(jobs,childPID) != NULL);
+		while(getjobpid(jobs,childPID) != NULL); //TODO: WAITFG
 	}
 
 }
@@ -509,11 +509,28 @@ sigchld_handler(int signum)
 	int olderrno = errno;
 	sigset_t mask_all, prev_all;
 	pid_t pid;
-	
+	int status;
 	sigfillset(&mask_all);
-	while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) { /* Reap a zombie child */
+	// while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) { /* Reap a zombie child */
+	while ((pid = waitpid(-1, &status, WUNTRACED | WNOHANG)) > 0) { /* Reap a zombie child */
+		// TODO: CHWCK FOR WIFESTOPPED OR EXITED OR WHATEVS
+		// if stopped update status
+		// if terminated remove it
 		sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
-		deletejob(jobs, pid); /* Delete the child from the job list */
+		if (WIFEXITED(status)) {
+			deletejob(jobs, pid); /* Delete the child from the job list */
+		}
+		if (WIFSIGNALED(status)) {
+			char * out = malloc(sizeof *out * 100);
+			sprintf(out, "Job [%d] (%d) terminated by signal %s\n", pid2jid(pid), pid, signame[WTERMSIG(status)]);
+			Sio_error(out);
+			free(out);
+			deletejob(jobs, pid); /* Delete the child from the job list */
+		}
+		if(WIFSTOPPED(status)) {
+			JobP stoppedJob = getjobpid(jobs, pid);
+			stoppedJob->state = ST;
+		}
 		sigprocmask(SIG_SETMASK, &prev_all, NULL);
 	}
 	if (errno != ECHILD)
