@@ -559,7 +559,7 @@ sigchld_handler(int signum)
 			Sio_putl(pid2jid(pid));
 			Sio_puts("] (");
 			Sio_putl(pid);
-			Sio_puts(") terminated by signal SIG");
+			Sio_puts(") stopped by signal SIG");
 			Sio_puts(signame[WSTOPSIG(status)]);
 			Sio_puts("\n");
 			JobP stoppedJob = getjobpid(jobs, pid);
