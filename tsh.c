@@ -310,6 +310,7 @@ eval(const char *cmdline)
 		}
 		sigprocmask(SIG_BLOCK, &mask_all, NULL);
 		addjob(jobs, childPID, bg ? BG : FG, cmdline);
+		if(bg) printf("[%d] (%d) %s", pid2jid(childPID), childPID, getjobpid(jobs,childPID)-> cmdline);
 		sigprocmask(SIG_SETMASK, &prev_one, NULL);
 		waitfg(childPID);
 	}
@@ -414,9 +415,11 @@ builtin_cmd(char **argv)
 		listjobs(jobs);
 		return(true);
 	}
-	else if(strcmp(argv[0], "bg") == 0 || strcmp(argv[0], "fg") == 0)
+	else if(strcmp(argv[0], "bg") == 0 || strcmp(argv[0], "fg") == 0){
+		do_bgfg(argv);
 		return(true);
-
+	}
+	
 	return (false);     // This is not a built-in command.
 }
 
@@ -431,13 +434,25 @@ builtin_cmd(char **argv)
  */
 static void
 do_bgfg(char **argv) 
-{
-	if(argv[1])
-	// Prevent an "unused parameter" warning.  REMOVE THIS STATEMENT!
+{	
+	pid_t pid;
+	if(argv[1][0] == '%')
+		pid = getjobjid(jobs, atoi(&argv[1][1])) -> pid;
+	else
+		pid = getjobpid(jobs, atoi(argv[1])) -> pid;
+	
 	if(strcmp(argv[0], "bg") == 0){
-
+		printf("[%d] (%d) %s", pid2jid(pid), pid, getjobpid(jobs, pid)-> cmdline);
+		kill(pid, SIGCONT);
+		getjobpid(jobs, pid) -> state = BG;
+		
 	}
-	else if(strcmp(argv[0], "fg") == 0)
+	else if(strcmp(argv[0], "fg") == 0){
+		kill(pid, SIGCONT);
+		getjobpid(jobs, pid) -> state = FG;
+		waitfg(pid);
+	}
+	
 
 
 	//(void)argv;
