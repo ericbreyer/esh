@@ -587,7 +587,7 @@ sigtstp_handler(int signum)
 	(void)signum;
 	int pid;
 	if((pid = -fgpid(jobs)) != 0) {
-		kill(pid, SIGTSTP);
+		kill(pid, SIGSTOP);
 	}
 }
 
