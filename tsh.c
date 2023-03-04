@@ -106,12 +106,12 @@ static const char *const signame[NSIG] = {
 static bool	builtin_cmd(char **argv);
 static void	do_bgfg(char **argv);
 static void	eval(const char *cmdline);
-static void	initpath(const char *pathstr);
-static void	waitfg(pid_t pid);
+static void	initpath(const char *pathstr); //
+static void	waitfg(pid_t pid); //
 
-static void	sigchld_handler(int signum);
-static void	sigint_handler(int signum);
-static void	sigtstp_handler(int signum);
+static void	sigchld_handler(int signum); //
+static void	sigint_handler(int signum); //
+static void	sigtstp_handler(int signum); //
 
 // We are providing the following functions to you:
 
@@ -299,7 +299,7 @@ eval(const char *cmdline)
 	sigemptyset(&mask_one);
 	sigaddset(&mask_one, SIGCHLD);
 	// signal(SIGCHLD, sigchld_handler)
-	initjobs(jobs);
+	// initjobs(jobs);
 
 	if(argv[0][0] == '.' || argv[0][0] == '/') {
 		sigprocmask(SIG_BLOCK, &mask_one, &prev_one);
@@ -309,7 +309,7 @@ eval(const char *cmdline)
 			execve(argv[0], argv, NULL);
 		}
 		sigprocmask(SIG_BLOCK, &mask_all, NULL);
-		addjob(jobs, childPID, FG, cmdline);
+		addjob(jobs, childPID, bg ? BG : FG, cmdline);
 		sigprocmask(SIG_SETMASK, &prev_one, NULL);
 		waitfg(childPID);
 	}
@@ -457,7 +457,7 @@ waitfg(pid_t pid)
 {
 	sigset_t prev;
 	sigprocmask(-1, NULL, &prev);
-	while(getjobpid(jobs,pid) != NULL) {
+	while(getjobpid(jobs,pid) != NULL && getjobpid(jobs,pid)->state == FG) {
 		sigsuspend(&prev);
 	}
 }
@@ -515,6 +515,7 @@ sigchld_handler(int signum)
 {
 	(void) signum;
 	int olderrno = errno;
+	// errno = ECHILD;
 	// sigset_t mask_all, prev_all;
 	pid_t pid;
 	int status;
@@ -529,7 +530,6 @@ sigchld_handler(int signum)
 			deletejob(jobs, pid); /* Delete the child from the job list */
 		}
 		if (WIFSIGNALED(status)) {
-			char * out = malloc(sizeof *out * 100);
 			Sio_puts("Job [");
 			Sio_putl(pid2jid(pid));
 			Sio_puts("] (");
@@ -537,7 +537,6 @@ sigchld_handler(int signum)
 			Sio_puts(") terminated by signal SIG");
 			Sio_puts(signame[WTERMSIG(status)]);
 			Sio_puts("\n");
-			free(out);
 			deletejob(jobs, pid); /* Delete the child from the job list */
 		}
 		if(WIFSTOPPED(status)) {
@@ -545,9 +544,12 @@ sigchld_handler(int signum)
 			stoppedJob->state = ST;
 		}
 		// sigprocmask(SIG_SETMASK, &prev_all, NULL);
+		status = 0;
 	}
-	if (errno != ECHILD)
-		Sio_error("waitpid error");
+	// if (errno != ECHILD) {
+	// 	Sio_error("waitpid error");
+
+	// }
 	errno = olderrno;
 }
 
