@@ -451,7 +451,7 @@ waitfg(pid_t pid)
 {
 	sigset_t prev;
 	sigprocmask(-1, NULL, &prev);
-	while(getjobpid(jobs,pid) != NULL) {
+	while(getjobpid(jobs,pid) != NULL && getjobpid(jobs,pid)->state == FG) {
 		sigsuspend(&prev);
 	}
 }
@@ -509,7 +509,7 @@ sigchld_handler(int signum)
 {
 	(void) signum;
 	int olderrno = errno;
-	errno = ECHILD;
+	// errno = ECHILD;
 	// sigset_t mask_all, prev_all;
 	pid_t pid;
 	int status;
@@ -524,6 +524,7 @@ sigchld_handler(int signum)
 			deletejob(jobs, pid); /* Delete the child from the job list */
 		}
 		if (WIFSIGNALED(status)) {
+			
 			Sio_puts("Job [");
 			Sio_putl(pid2jid(pid));
 			Sio_puts("] (");
@@ -536,10 +537,15 @@ sigchld_handler(int signum)
 		if(WIFSTOPPED(status)) {
 			JobP stoppedJob = getjobpid(jobs, pid);
 			stoppedJob->state = ST;
+			Sio_puts("IN HERE");
 		}
+		// sigprocmask(SIG_SETMASK, &prev_all, NULL);
+
 	}
-	if (errno != ECHILD)
-		Sio_error("waitpid error");
+	// if (errno != ECHILD) {
+	// 	Sio_error("waitpid error");
+
+	// }
 	errno = olderrno;
 }
 
@@ -585,7 +591,7 @@ sigtstp_handler(int signum)
 	(void)signum;
 	int pid;
 	if((pid = -fgpid(jobs)) != 0) {
-		kill(pid, SIGSTOP);
+		kill(pid, SIGTSTP);
 	}
 }
 
