@@ -432,12 +432,18 @@ builtin_cmd(char **argv)
 static void
 do_bgfg(char **argv) 
 {
-
+	if(argv[1])
 	// Prevent an "unused parameter" warning.  REMOVE THIS STATEMENT!
-	(void)argv;
+	if(strcmp(argv[0], "bg") == 0){
+
+	}
+	else if(strcmp(argv[0], "fg") == 0)
+
+
+	//(void)argv;
 }
 
-/* 
+/* g
  * waitfg - Block until process pid is no longer the foreground process.
  *
  * Requires:
@@ -587,7 +593,7 @@ sigtstp_handler(int signum)
 	(void)signum;
 	int pid;
 	if((pid = -fgpid(jobs)) != 0) {
-		kill(pid, SIGSTOP);
+		kill(pid, SIGTSTP);
 	}
 }
 
