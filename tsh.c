@@ -311,7 +311,7 @@ eval(const char *cmdline)
 		sigprocmask(SIG_BLOCK, &mask_all, NULL);
 		addjob(jobs, childPID, FG, cmdline);
 		sigprocmask(SIG_SETMASK, &prev_one, NULL);
-		while(getjobpid(jobs,childPID) != NULL); //TODO: WAITFG
+		waitfg(childPID);
 	}
 
 }
@@ -449,9 +449,11 @@ do_bgfg(char **argv)
 static void
 waitfg(pid_t pid)
 {
-
-	// Prevent an "unused parameter" warning.  REMOVE THIS STATEMENT!
-	(void)pid;
+	sigset_t prev;
+	sigprocmask(-1, NULL, &prev);
+	while(getjobpid(jobs,pid) != NULL) {
+		sigsuspend(&prev);
+	}
 }
 
 char ** pathDirs;
@@ -522,8 +524,13 @@ sigchld_handler(int signum)
 		}
 		if (WIFSIGNALED(status)) {
 			char * out = malloc(sizeof *out * 100);
-			sprintf(out, "Job [%d] (%d) terminated by signal %s\n", pid2jid(pid), pid, signame[WTERMSIG(status)]);
-			Sio_error(out);
+			Sio_puts("Job [");
+			Sio_putl(pid2jid(pid));
+			Sio_puts("] (");
+			Sio_putl(pid);
+			Sio_puts("terminated by signal ");
+			Sio_puts(signame[WTERMSIG(status)]);
+			Sio_puts("\n");
 			free(out);
 			deletejob(jobs, pid); /* Delete the child from the job list */
 		}
