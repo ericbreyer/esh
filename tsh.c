@@ -406,7 +406,10 @@ static bool
 builtin_cmd(char **argv) 
 {
 
-
+	if(argv[0] == NULL){
+		return(true);
+	}
+	
 	if(strcmp(argv[0], "quit") == 0){
 		exit(0);
 		return(true);
