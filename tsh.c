@@ -60,6 +60,10 @@ extern char **environ;             // defined by libc
 static char prompt[] = "tsh> ";    // command line prompt (DO NOT CHANGE)
 static bool verbose = false;       // If true, print additional output.
 
+char ** pathDirs = NULL;
+int pathDirsLen = 0;
+
+
 /*
  * The following array can be used to map a signal number to its name.
  * This mapping is valid for x86(-64)/Linux systems, such as CLEAR.
@@ -301,19 +305,34 @@ eval(const char *cmdline)
 	// signal(SIGCHLD, sigchld_handler)
 	// initjobs(jobs);
 
-	if(argv[0][0] == '.' || argv[0][0] == '/') {
-		sigprocmask(SIG_BLOCK, &mask_one, &prev_one);
-		if((childPID = fork()) == 0) { //child
-			setpgid(0,0);
-			sigprocmask(SIG_SETMASK, &prev_one, NULL);
-			execve(argv[0], argv, NULL);
+	FILE * executable = NULL;
+	char * path = NULL;
+	for(int dirIdx = 0; dirIdx < pathDirsLen; ++dirIdx) {
+		path = malloc(strlen(argv[0]) + strlen(pathDirs[dirIdx] + 1));
+		sprintf(path, "%s/%s", pathDirs[dirIdx], argv[0]);
+		if((executable = fopen(path, "r")) == NULL) {
+			continue;
 		}
-		sigprocmask(SIG_BLOCK, &mask_all, NULL);
-		addjob(jobs, childPID, bg ? BG : FG, cmdline);
-		if(bg) printf("[%d] (%d) %s", pid2jid(childPID), childPID, getjobpid(jobs,childPID)-> cmdline);
-		sigprocmask(SIG_SETMASK, &prev_one, NULL);
-		waitfg(childPID);
+		fclose(executable);
+		break;
 	}
+
+	if(argv[0][0] == '.' || argv[0][0] == '/' || path == NULL) {
+		path = argv[0];
+	}
+
+	sigprocmask(SIG_BLOCK, &mask_one, &prev_one);
+	if((childPID = fork()) == 0) { //child
+		setpgid(0,0);
+		sigprocmask(SIG_SETMASK, &prev_one, NULL);
+		execve(path, argv, NULL);
+	}
+	sigprocmask(SIG_BLOCK, &mask_all, NULL);
+	addjob(jobs, childPID, bg ? BG : FG, cmdline);
+	if(bg) printf("[%d] (%d) %s", pid2jid(childPID), childPID, getjobpid(jobs,childPID)-> cmdline);
+	sigprocmask(SIG_SETMASK, &prev_one, NULL);
+	free(path);
+	waitfg(childPID);
 
 }
 
@@ -480,8 +499,6 @@ waitfg(pid_t pid)
 	}
 }
 
-char ** pathDirs;
-
 /* 
  * initpath - Perform all necessary initialization of the search path,
  *  which may be simply saving the path.
@@ -505,10 +522,12 @@ initpath(const char *pathstr)
 	int pos = 0;
 	char * tok = strtok((char *)pathstr, ":");
 	while (tok != NULL) {
-		tok = strtok(NULL, ":");
 		pathDirs[pos] = tok;
+		tok = strtok(NULL, ":");
 		++pos;
+		++pathDirsLen;
 	}
+	// pathDirsLen = pos;
 }
 
 /*
