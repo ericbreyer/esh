@@ -144,6 +144,48 @@ static ssize_t sio_puts(const char s[]);
 static void sio_reverse(char s[]);
 static size_t sio_strlen(const char s[]);
 
+
+static void * Malloc(size_t size) {
+        void * ptr = malloc(size);
+        if(ptr == NULL) {
+                Sio_error("malloc returned out of memory\n");
+        }
+        return ptr;
+}
+static void Kill(int pid, int sig) {
+        if(kill(pid, SIGINT)) {
+                Sio_puts("Unable to send signal ");
+                Sio_putl(sig);
+                Sio_puts(" to process ");
+                Sio_putl(pid);
+                unix_error("\n");
+        }
+}
+
+static void Sigfillset(sigset_t * ss) {
+        if(sigfillset(ss)) {
+                unix_error("Unable to fill signal set\n");
+        }
+}
+
+static void Sigemptyset(sigset_t * ss) {
+        if(sigemptyset(ss)) {
+                unix_error("Unable to empty signal set\n");
+        }
+}
+
+static void Sigaddset(sigset_t * ss, int sig) {
+        if(sigaddset(ss, sig)) {
+                unix_error("Unable to add to signal set\n");
+        }
+}
+
+static void Sigprocmask(int sig, sigset_t * ss, sigset_t * ps) {
+        if(sigprocmask(sig, ss, ps)) {
+                unix_error("Unable to sig proc mask\n");
+        }
+}
+
 /*
  * Requires:
  *   <to be filled in by the student(s)>
@@ -284,7 +326,7 @@ static void
 eval(const char *cmdline)
 {
 
-        char **argv = malloc(MAXARGS * sizeof(char *));
+        char **argv = Malloc(MAXARGS * sizeof(char *));
         bool bg = parseline(cmdline, argv);
         (void)bg;
 
@@ -294,14 +336,14 @@ eval(const char *cmdline)
         int childPID = 0;
         sigset_t mask_all, mask_one, prev_one;
 
-        sigfillset(&mask_all);
-        sigemptyset(&mask_one);
-        sigaddset(&mask_one, SIGCHLD);
+        Sigfillset(&mask_all);
+        Sigemptyset(&mask_one);
+        Sigaddset(&mask_one, SIGCHLD);
         // signal(SIGCHLD, sigchld_handler)
         // initjobs(jobs);
 
         FILE *executable = NULL;
-        char *path = malloc(MAXLINE);
+        char *path = Malloc(MAXLINE);
 
         if (argv[0][0] == '.' || argv[0][0] == '/') {
                 strcpy(path, argv[0]);
@@ -317,21 +359,23 @@ eval(const char *cmdline)
                 }
         }
 
-        sigprocmask(SIG_BLOCK, &mask_one, &prev_one);
+        Sigprocmask(SIG_BLOCK, &mask_one, &prev_one);
         if ((childPID = fork()) == 0) { // child
-                setpgid(0, 0);
-                sigprocmask(SIG_SETMASK, &prev_one, NULL);
+                if(setpgid(0, 0)) {
+                        unix_error("Unable to set gpid");
+                }
+                Sigprocmask(SIG_SETMASK, &prev_one, NULL);
                 if (execve(path, argv, NULL)) {
                         fprintf(stderr, "%s: Command not found.\n", argv[0]);
                 };
                 exit(0);
         }
-        sigprocmask(SIG_BLOCK, &mask_all, NULL);
+        Sigprocmask(SIG_BLOCK, &mask_all, NULL);
         addjob(jobs, childPID, bg ? BG : FG, cmdline);
         if (bg)
                 printf("[%d] (%d) %s", pid2jid(childPID), childPID,
                        getjobpid(jobs, childPID)->cmdline);
-        sigprocmask(SIG_SETMASK, &prev_one, NULL);
+        Sigprocmask(SIG_SETMASK, &prev_one, NULL);
         free(path);
         waitfg(childPID);
 }
@@ -462,11 +506,11 @@ do_bgfg(char **argv)
         if (strcmp(argv[0], "bg") == 0) {
                 printf("[%d] (%d) %s", pid2jid(pid), pid,
                        getjobpid(jobs, pid)->cmdline);
-                kill(pid, SIGCONT);
+                Kill(pid, SIGCONT);
                 getjobpid(jobs, pid)->state = BG;
 
         } else if (strcmp(argv[0], "fg") == 0) {
-                kill(pid, SIGCONT);
+                Kill(pid, SIGCONT);
                 getjobpid(jobs, pid)->state = FG;
                 waitfg(pid);
         }
@@ -487,7 +531,7 @@ static void
 waitfg(pid_t pid)
 {
         sigset_t prev;
-        sigprocmask(-1, NULL, &prev);
+        Sigprocmask(-1, NULL, &prev);
         while (getjobpid(jobs, pid) != NULL &&
                getjobpid(jobs, pid)->state == FG) {
                 sigsuspend(&prev);
@@ -513,7 +557,7 @@ initpath(const char *pathstr)
                         ++colons;
         }
 
-        pathDirs = malloc(sizeof *pathDirs * (colons + 1));
+        pathDirs = Malloc(sizeof *pathDirs * (colons + 1));
 		pathDirsLen = colons + 1;
         char *tok = strtok((char *)pathstr, ":");
         for(int i = 0; i < pathDirsLen; ++i) {
@@ -617,7 +661,7 @@ sigint_handler(int signum)
         (void)signum;
         int pid;
         if ((pid = -fgpid(jobs)) != 0) {
-                kill(pid, SIGINT);
+                Kill(pid, SIGINT);
         }
 }
 
@@ -640,7 +684,7 @@ sigtstp_handler(int signum)
         (void)signum;
         int pid;
         if ((pid = -fgpid(jobs)) != 0) {
-                kill(pid, SIGTSTP);
+                Kill(pid, SIGTSTP);
         }
 }
 
