@@ -3,7 +3,7 @@
  *
  * This program implements a tiny shell with job control.
  *
- * <Put your name(s) and NetID(s) here>
+ * Aditi Raju, ar139 & Eric Breyer, eab17
  */
 
 #include <sys/types.h>
@@ -146,11 +146,11 @@ static size_t sio_strlen(const char s[]);
 
 /*
  * Requires:
- *   Nothing
+ *   Nothing.
  *
  * Effects:
  *   Allocates a pointer of size size and returns it on success, throws and
- * error and exits the program on out of memory failure
+ *   error and exits the program on out of memory failure.
  */
 static void *
 Malloc(size_t size)
@@ -164,11 +164,11 @@ Malloc(size_t size)
 
 /*
  * Requires:
- *   Nothing
+ *   Nothing.
  *
  * Effects:
  *   Sends the signal sig to the process identified by pid on sucess, throws an
- *   error and exits the program if the kill is unsuccessful
+ *   error and exits the program if the kill is unsuccessful.
  */
 static void
 Kill(int pid, int sig)
@@ -184,11 +184,11 @@ Kill(int pid, int sig)
 
 /*
  * Requires:
- *   Nothing
+ *   Nothing.
  *
  * Effects:
- *   initializes set ss to full on sucess, throws an
- *   error and exits the program if the sigfillset is unsuccessful
+ *   Initializes set ss to full on sucess, throws an
+ *   error and exits the program if the sigfillset is unsuccessful.
  */
 static void
 Sigfillset(sigset_t *ss)
@@ -200,11 +200,11 @@ Sigfillset(sigset_t *ss)
 
 /*
  * Requires:
- *   Nothing
+ *   Nothing.
  *
  * Effects:
- *   initializes the signal set given by ss to empty, throws an
- *   error and exits the program if the sigemptyset is unsuccessful
+ *   Initializes the signal set given by ss to empty, throws an
+ *   error and exits the program if the sigemptyset is unsuccessful.
  */
 static void
 Sigemptyset(sigset_t *ss)
@@ -216,11 +216,11 @@ Sigemptyset(sigset_t *ss)
 
 /*
  * Requires:
- *   Nothing
+ *   Nothing.
  *
  * Effects:
- *   add signal sig to set ss, throws an
- *   error and exits the program if the sigaddset is unsuccessful
+ *   Adds signal sig to set ss, throws an
+ *   error and exits the program if the sigaddset is unsuccessful.
  */
 static void
 Sigaddset(sigset_t *ss, int sig)
@@ -235,8 +235,8 @@ Sigaddset(sigset_t *ss, int sig)
  *   Nothing
  *
  * Effects:
- *   calls sigprocmask with the given arguments, throws an
- *   error and exits the program if the sigprocmask is unsuccessful
+ *   Calls sigprocmask with the given arguments, throws an
+ *   error and exits the program if the sigprocmask is unsuccessful.
  */
 static void
 Sigprocmask(int sig, sigset_t *ss, sigset_t *ps)
@@ -248,10 +248,12 @@ Sigprocmask(int sig, sigset_t *ss, sigset_t *ps)
 
 /*
  * Requires:
- *   <to be filled in by the student(s)>
+ *   Nothing.
  *
  * Effects:
- *   <to be filled in by the student(s)>
+ *   Installs all the necessary handlers for the shell's job control
+ *   operations. Initializes the search path and read-evaluates the command 
+ *   line. Then, the command line operations are executed. 
  */
 int
 main(int argc, char **argv)
@@ -389,10 +391,20 @@ main(int argc, char **argv)
  * when we type ctrl-c (ctrl-z) at the keyboard.
  *
  * Requires:
- *   <to be filled in by the student(s)>
+ *   The command line typed by the user, "cmdline" should consist of a 
+ *   "name"(argv[0]) and zero or more arguments, all separated by one or more 
+ *   spaces. "name" should be a built-in command or the name of an executable 
+ *   file.
  *
  * Effects:
- *   <to be filled in by the student(s)>
+ *   Parses the command line and performs the necessary commands. If "name"
+ *   is a built-in command, handle it immediately. Otherwise, load and run
+ *   the executable file names "name" in the context of an initial child 
+ *   process. If "name" does not start with a directory and the search path 
+ *   is not null, search the directories in the path for an executable file
+ *   names "name", then load and run the first file that is found.If "name" 
+ *   starts with a directory or the search path is NULL, tsh should assume
+ *   that "name" is the path name of an executable file 
  */
 static void
 eval(const char *cmdline)
@@ -418,7 +430,7 @@ eval(const char *cmdline)
         if (argv[0][0] == '.' || argv[0][0] == '/') {
                 strcpy(executeable_path, argv[0]);
         }
-        // else, search the directories in the $PATH for the executeable
+        // else, search the directories in the $PATH for the executable
         else {
                 for (int dirIdx = 0; dirIdx < pathDirsLen; ++dirIdx) {
                         sprintf(executeable_path, "%s/%s", pathDirs[dirIdx],
@@ -437,14 +449,14 @@ eval(const char *cmdline)
         Sigprocmask(SIG_BLOCK, &mask_one, &prev_one);
         // Fork the process to spawn a child.
         if ((childPID = fork()) == 0) { // child
-                // Make a new process group so sigint dosent kill tsh.
+                // Make a new process group so sigint doesn't kill tsh.
                 if (setpgid(0, 0)) {
                         unix_error("Unable to set gpid");
                 }
                 // Child inherits masks so reset it.
                 Sigprocmask(SIG_SETMASK, &prev_one, NULL);
                 /*
-                 * Try to run the program at the path, if it cant be found then
+                 * Try to run the program at the path, if it can't be found then
                  * exit.
                  */
                 if (execve(executeable_path, argv, NULL)) {
@@ -461,9 +473,9 @@ eval(const char *cmdline)
                        getjobpid(jobs, childPID)->cmdline);
         // Reset the mask.
         Sigprocmask(SIG_SETMASK, &prev_one, NULL);
-        free(executeable_path); // dont need this anymore
+        free(executeable_path); // dont need this anymore 
 
-        // Wait on a foreground process.(waitfg will just pass if we spawn a bg)
+        // Wait on a foreground process (waitfg will just pass if we spawn a bg)
         waitfg(childPID);
 }
 
@@ -581,10 +593,12 @@ builtin_cmd(char **argv)
  * do_bgfg - Execute the built-in bg and fg commands.
  *
  * Requires:
- *   <to be filled in by the student(s)>
+ *   "argv" is a bg or fg command followed by an argument that is either
+ *    a valid PID or JID of a job.
  *
  * Effects:
- *   <to be filled in by the student(s)>
+ *   Sends a SIGCONT signal to the job and runs the job in the foreground if 
+ *   the command is "fg", or background if the command is "bg".
  */
 static void
 do_bgfg(char **argv)

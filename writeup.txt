@@ -1,5 +1,5 @@
 COMP 321 Project 4: Unix Shell
-<Replace with your name(s) and NetID(s).>
+Aditi Raju, ar139 & Eric Breyer, eab17
 
 ---(Do not write lines of text that exceed the width of this line.)------------
 
