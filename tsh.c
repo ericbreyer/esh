@@ -459,9 +459,8 @@ eval(const char *cmdline)
                  * Try to run the program at the path, if it can't be found then
                  * exit.
                  */
-                if (execve(executeable_path, argv, NULL)) {
-                        fprintf(stderr, "%s: Command not found.\n", argv[0]);
-                };
+                execve(executeable_path, argv, NULL);
+                fprintf(stderr, "%s: Command not found.\n", argv[0]);
                 exit(0);
         }
         // Mask all signals while we add the job to the list to prevent races.
@@ -605,16 +604,31 @@ do_bgfg(char **argv)
 {
         // Get the pid from argv[1] (can either be a jid or pid).
         pid_t pid = atoi(argv[1]);
-        ;
-        if (argv[1][0] == '%')
-                pid = getjobjid(jobs, atoi(&argv[1][1]))->pid;
-        else
+        if (argv[1][0] == '%') {
+                int jid = atoi(&argv[1][1]);
+                JobP job = getjobjid(jobs, jid);
+                if (!job) {
+                        printf("%s: No such job\n", argv[1]);
+                        return;
+                }
+                pid = job->pid;
+        } else {
                 pid = atoi(argv[1]);
+                if(pid == 0) {
+                        printf("%s: argument must be a PID or %%jobid\n", argv[0]);
+                        return;
+                }
+        }
+
+        JobP job = getjobpid(jobs, pid);
+        if (!job) {
+                printf("(%d): No such process\n", pid);
+                return;
+        }
 
         // If the command is bg, send a continue and put it in the background.
         if (strcmp(argv[0], "bg") == 0) {
-                printf("[%d] (%d) %s", pid2jid(pid), pid,
-                       getjobpid(jobs, pid)->cmdline);
+                printf("[%d] (%d) %s", pid2jid(pid), pid, job->cmdline);
                 Kill(pid, SIGCONT);
                 getjobpid(jobs, pid)->state = BG;
 
@@ -677,9 +691,8 @@ initpath(const char *pathstr)
         char *tok = strtok((char *)pathstr, ":");
         for (int i = 0; i < pathDirsLen; ++i) {
                 if (tok == NULL) {
-                        tok = "./";
+                        tok = ".";
                 }
-                // printf("--|%s|--\n", tok);
                 pathDirs[i] = tok;
                 tok = strtok(NULL, ":");
         }
