@@ -410,10 +410,12 @@ parseline(const char *cmdline, char **argv)
  *  it immediately.
  *
  * Requires:
- *   <to be filled in by the student(s)>
+ *   argv consists of a name followed by zero or more arguments, where name 
+ *   is a built-in command supported by tsh - quit, jobs, bg or fg.
  *
  * Effects:
- *   <to be filled in by the student(s)>
+ *   Returns true if the first element of argv is a built-in command, and 
+ *   performs the appropriate command, returns false otherwise.  
  *
  * Note:
  *   In the textbook, this function has the return type "int", but "bool"
@@ -474,14 +476,15 @@ do_bgfg(char **argv)
         //(void)argv;
 }
 
-/* g
+/* 
  * waitfg - Block until process pid is no longer the foreground process.
  *
  * Requires:
- *   <to be filled in by the student(s)>
+ *   The given pid is a valid pid of a foreground process.
  *
  * Effects:
- *   <to be filled in by the student(s)>
+ *   Waits for the foreground process to complete while the process is still 
+ *   running in the foreground by blocking the shell. 
  */
 static void
 waitfg(pid_t pid)
@@ -502,7 +505,8 @@ waitfg(pid_t pid)
  *   "pathstr" is a valid search path.
  *
  * Effects:
- *   <to be filled in by the student(s)>
+ *   Creates an array of strings by splitting the search path, where each entry 
+ *   in the array is a directory in the search path, pathstr. 
  */
 static void
 initpath(const char *pathstr)
@@ -604,10 +608,11 @@ sigchld_handler(int signum)
  *  to the foreground job.
  *
  * Requires:
- *   <to be filled in by the student(s)>
+ *   "signum" is SIGINT
  *
  * Effects:
- *   <to be filled in by the student(s)>
+ *   Sends a SIGINT signal to every process in the foreground process group,
+ *   which terminates the foreground process.
  */
 static void
 sigint_handler(int signum)
@@ -627,10 +632,11 @@ sigint_handler(int signum)
  *  foreground job by sending it a SIGTSTP.
  *
  * Requires:
- *   <to be filled in by the student(s)>
+ *   "signum" is SIGTSTP
  *
  * Effects:
- *   <to be filled in by the student(s)>
+ *   Sends a SIGTSTP signal to every process in the foreground process group,
+ *   which suspepends the foreground job. 
  */
 static void
 sigtstp_handler(int signum)
