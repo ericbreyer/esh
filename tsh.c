@@ -144,16 +144,36 @@ static ssize_t sio_puts(const char s[]);
 static void sio_reverse(char s[]);
 static size_t sio_strlen(const char s[]);
 
-
-static void * Malloc(size_t size) {
-        void * ptr = malloc(size);
-        if(ptr == NULL) {
+/*
+ * Requires:
+ *   Nothing
+ *
+ * Effects:
+ *   Allocates a pointer of size size and returns it on success, throws and
+ * error and exits the program on out of memory failure
+ */
+static void *
+Malloc(size_t size)
+{
+        void *ptr = malloc(size);
+        if (ptr == NULL) {
                 Sio_error("malloc returned out of memory\n");
         }
         return ptr;
 }
-static void Kill(int pid, int sig) {
-        if(kill(pid, SIGINT)) {
+
+/*
+ * Requires:
+ *   Nothing
+ *
+ * Effects:
+ *   Sends the signal sig to the process identified by pid on sucess, throws an
+ *   error and exits the program if the kill is unsuccessful
+ */
+static void
+Kill(int pid, int sig)
+{
+        if (kill(pid, sig)) {
                 Sio_puts("Unable to send signal ");
                 Sio_putl(sig);
                 Sio_puts(" to process ");
@@ -162,26 +182,66 @@ static void Kill(int pid, int sig) {
         }
 }
 
-static void Sigfillset(sigset_t * ss) {
-        if(sigfillset(ss)) {
+/*
+ * Requires:
+ *   Nothing
+ *
+ * Effects:
+ *   initializes set ss to full on sucess, throws an
+ *   error and exits the program if the sigfillset is unsuccessful
+ */
+static void
+Sigfillset(sigset_t *ss)
+{
+        if (sigfillset(ss)) {
                 unix_error("Unable to fill signal set\n");
         }
 }
 
-static void Sigemptyset(sigset_t * ss) {
-        if(sigemptyset(ss)) {
+/*
+ * Requires:
+ *   Nothing
+ *
+ * Effects:
+ *   initializes the signal set given by ss to empty, throws an
+ *   error and exits the program if the sigemptyset is unsuccessful
+ */
+static void
+Sigemptyset(sigset_t *ss)
+{
+        if (sigemptyset(ss)) {
                 unix_error("Unable to empty signal set\n");
         }
 }
 
-static void Sigaddset(sigset_t * ss, int sig) {
-        if(sigaddset(ss, sig)) {
+/*
+ * Requires:
+ *   Nothing
+ *
+ * Effects:
+ *   add signal sig to set ss, throws an
+ *   error and exits the program if the sigaddset is unsuccessful
+ */
+static void
+Sigaddset(sigset_t *ss, int sig)
+{
+        if (sigaddset(ss, sig)) {
                 unix_error("Unable to add to signal set\n");
         }
 }
 
-static void Sigprocmask(int sig, sigset_t * ss, sigset_t * ps) {
-        if(sigprocmask(sig, ss, ps)) {
+/*
+ * Requires:
+ *   Nothing
+ *
+ * Effects:
+ *   calls sigprocmask with the given arguments, throws an
+ *   error and exits the program if the sigprocmask is unsuccessful
+ */
+static void
+Sigprocmask(int sig, sigset_t *ss, sigset_t *ps)
+{
+        if (sigprocmask(sig, ss, ps)) {
                 unix_error("Unable to sig proc mask\n");
         }
 }
@@ -234,6 +294,10 @@ main(int argc, char **argv)
          */
         action.sa_handler = sigint_handler;
         action.sa_flags = SA_RESTART;
+        /*
+         * Block all signals while in sigint_handler, this is convertive in
+         * it's restrictiveness but garuntees we won't run into problems.
+         */
         if (sigfillset(&action.sa_mask) < 0)
                 unix_error("sigemptyset error");
         if (sigaction(SIGINT, &action, NULL) < 0)
@@ -246,6 +310,10 @@ main(int argc, char **argv)
          */
         action.sa_handler = sigtstp_handler;
         action.sa_flags = SA_RESTART;
+        /*
+         * Block all signals while in sigtstp_handler, this is convertive in
+         * it's restrictiveness but garuntees we won't run into problems.
+         */
         if (sigfillset(&action.sa_mask) < 0)
                 unix_error("sigemptyset error");
         if (sigaction(SIGTSTP, &action, NULL) < 0)
@@ -258,6 +326,10 @@ main(int argc, char **argv)
          */
         action.sa_handler = sigchld_handler;
         action.sa_flags = SA_RESTART;
+        /*
+         * Block all signals while in sigchld_handler, this is convertive in
+         * it's restrictiveness but garuntees we won't run into problems.
+         */
         if (sigfillset(&action.sa_mask) < 0)
                 unix_error("sigemptyset error");
         if (sigaction(SIGCHLD, &action, NULL) < 0)
@@ -326,57 +398,72 @@ static void
 eval(const char *cmdline)
 {
 
-        char **argv = Malloc(MAXARGS * sizeof(char *));
-        bool bg = parseline(cmdline, argv);
-        (void)bg;
-
-        if (builtin_cmd(argv))
-                return;
-
+        // Declare and initialize some variables and mask sets we will need.
         int childPID = 0;
         sigset_t mask_all, mask_one, prev_one;
-
         Sigfillset(&mask_all);
         Sigemptyset(&mask_one);
         Sigaddset(&mask_one, SIGCHLD);
-        // signal(SIGCHLD, sigchld_handler)
-        // initjobs(jobs);
+        FILE *executable_file = NULL;
+        char *executeable_path = Malloc(MAXLINE);
 
-        FILE *executable = NULL;
-        char *path = Malloc(MAXLINE);
+        // Parse and store the command line data.
+        char **argv = Malloc(MAXARGS * sizeof(char *));
+        bool bg = parseline(cmdline, argv);
 
+        // If the command is builtin, execute it now and return.
+        if (builtin_cmd(argv))
+                return;
+        // If the command is a path, that is the executable path.
         if (argv[0][0] == '.' || argv[0][0] == '/') {
-                strcpy(path, argv[0]);
-        } else {
+                strcpy(executeable_path, argv[0]);
+        }
+        // else, search the directories in the $PATH for the executeable
+        else {
                 for (int dirIdx = 0; dirIdx < pathDirsLen; ++dirIdx) {
-                        sprintf(path, "%s/%s", pathDirs[dirIdx], argv[0]);
-                        if ((executable = fopen(path, "r")) == NULL) {
-                                strcpy(path, "\0");
+                        sprintf(executeable_path, "%s/%s", pathDirs[dirIdx],
+                                argv[0]);
+                        if ((executable_file = fopen(executeable_path, "r")) ==
+                            NULL) {
+                                strcpy(executeable_path, "\0");
                                 continue;
                         }
-                        fclose(executable);
+                        fclose(executable_file);
                         break;
                 }
         }
 
+        // Block sigchilds while we spawn the task.
         Sigprocmask(SIG_BLOCK, &mask_one, &prev_one);
+        // Fork the process to spawn a child.
         if ((childPID = fork()) == 0) { // child
-                if(setpgid(0, 0)) {
+                // Make a new process group so sigint dosent kill tsh.
+                if (setpgid(0, 0)) {
                         unix_error("Unable to set gpid");
                 }
+                // Child inherits masks so reset it.
                 Sigprocmask(SIG_SETMASK, &prev_one, NULL);
-                if (execve(path, argv, NULL)) {
+                /*
+                 * Try to run the program at the path, if it cant be found then
+                 * exit.
+                 */
+                if (execve(executeable_path, argv, NULL)) {
                         fprintf(stderr, "%s: Command not found.\n", argv[0]);
                 };
                 exit(0);
         }
-        Sigprocmask(SIG_BLOCK, &mask_all, NULL);
+        // Mask all signals while we add the job to the list to prevent races.
+        Sigprocmask(SIG_BLOCK, &mask_all, NULL); // Parent
         addjob(jobs, childPID, bg ? BG : FG, cmdline);
+        // Print aditional info if the job is to run in the background.
         if (bg)
                 printf("[%d] (%d) %s", pid2jid(childPID), childPID,
                        getjobpid(jobs, childPID)->cmdline);
+        // Reset the mask.
         Sigprocmask(SIG_SETMASK, &prev_one, NULL);
-        free(path);
+        free(executeable_path); // dont need this anymore
+
+        // Wait on a foreground process.(waitfg will just pass if we spawn a bg)
         waitfg(childPID);
 }
 
@@ -466,22 +553,25 @@ parseline(const char *cmdline, char **argv)
 static bool
 builtin_cmd(char **argv)
 {
-
+        // If there are no arguments just pass and tell eval we handled it.
         if (argv[0] == NULL) {
-                return (true);
+                return true;
         }
-
+        // Exit normally on a quit.
         if (strcmp(argv[0], "quit") == 0) {
                 exit(0);
-                return (true);
-        } else if (strcmp(argv[0], "jobs") == 0) {
+        } 
+        // List the jobs and return that we found a builtin.
+        else if (strcmp(argv[0], "jobs") == 0) {
                 listjobs(jobs);
-                return (true);
-        } else if (strcmp(argv[0], "bg") == 0 || strcmp(argv[0], "fg") == 0) {
-                do_bgfg(argv);
-                return (true);
+                return true;
         }
-
+        // Delegate handling bg/fg to helper and return that we found a builtin.
+        else if (strcmp(argv[0], "bg") == 0 || strcmp(argv[0], "fg") == 0) {
+                do_bgfg(argv);
+                return true;
+        }
+        // If we did not recognize a builtin, return false.
         return (false); // This is not a built-in command.
 }
 
@@ -497,25 +587,27 @@ builtin_cmd(char **argv)
 static void
 do_bgfg(char **argv)
 {
-        pid_t pid;
+        // Get the pid from argv[1] (can either be a jid or pid).
+        pid_t pid = atoi(argv[1]);;
         if (argv[1][0] == '%')
                 pid = getjobjid(jobs, atoi(&argv[1][1]))->pid;
         else
-                pid = getjobpid(jobs, atoi(argv[1]))->pid;
+                pid = atoi(argv[1]);
 
+        // If the command is bg, send a continue and put it in the background.
         if (strcmp(argv[0], "bg") == 0) {
                 printf("[%d] (%d) %s", pid2jid(pid), pid,
                        getjobpid(jobs, pid)->cmdline);
                 Kill(pid, SIGCONT);
                 getjobpid(jobs, pid)->state = BG;
 
-        } else if (strcmp(argv[0], "fg") == 0) {
+        }
+        // If the command is fg, send a continue and put it in the foreground. 
+        else if (strcmp(argv[0], "fg") == 0) {
                 Kill(pid, SIGCONT);
                 getjobpid(jobs, pid)->state = FG;
                 waitfg(pid);
         }
-
-        //(void)argv;
 }
 
 /* g
@@ -530,10 +622,11 @@ do_bgfg(char **argv)
 static void
 waitfg(pid_t pid)
 {
+        // Get the current signal mask.
         sigset_t prev;
         Sigprocmask(-1, NULL, &prev);
-        while (getjobpid(jobs, pid) != NULL &&
-               getjobpid(jobs, pid)->state == FG) {
+        // Block while the job is still in the foreground.
+        while (fgpid(jobs) == pid) {
                 sigsuspend(&prev);
         }
 }
@@ -558,13 +651,13 @@ initpath(const char *pathstr)
         }
 
         pathDirs = Malloc(sizeof *pathDirs * (colons + 1));
-		pathDirsLen = colons + 1;
+        pathDirsLen = colons + 1;
         char *tok = strtok((char *)pathstr, ":");
-        for(int i = 0; i < pathDirsLen; ++i) {
-				if(tok == NULL) {
-					tok = "./";
-				}
-				// printf("--|%s|--\n", tok);
+        for (int i = 0; i < pathDirsLen; ++i) {
+                if (tok == NULL) {
+                        tok = "./";
+                }
+                // printf("--|%s|--\n", tok);
                 pathDirs[i] = tok;
                 tok = strtok(NULL, ":");
         }
