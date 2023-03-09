@@ -252,8 +252,8 @@ Sigprocmask(int sig, sigset_t *ss, sigset_t *ps)
  *
  * Effects:
  *   Installs all the necessary handlers for the shell's job control
- *   operations. Initializes the search path and read-evaluates the command 
- *   line. Then, the command line operations are executed. 
+ *   operations. Initializes the search path and read-evaluates the command
+ *   line. Then, the command line operations are executed.
  */
 int
 main(int argc, char **argv)
@@ -391,20 +391,20 @@ main(int argc, char **argv)
  * when we type ctrl-c (ctrl-z) at the keyboard.
  *
  * Requires:
- *   The command line typed by the user, "cmdline" should consist of a 
- *   "name"(argv[0]) and zero or more arguments, all separated by one or more 
- *   spaces. "name" should be a built-in command or the name of an executable 
+ *   The command line typed by the user, "cmdline" should consist of a
+ *   "name"(argv[0]) and zero or more arguments, all separated by one or more
+ *   spaces. "name" should be a built-in command or the name of an executable
  *   file.
  *
  * Effects:
  *   Parses the command line and performs the necessary commands. If "name"
  *   is a built-in command, handle it immediately. Otherwise, load and run
- *   the executable file names "name" in the context of an initial child 
- *   process. If "name" does not start with a directory and the search path 
+ *   the executable file names "name" in the context of an initial child
+ *   process. If "name" does not start with a directory and the search path
  *   is not null, search the directories in the path for an executable file
- *   names "name", then load and run the first file that is found.If "name" 
+ *   names "name", then load and run the first file that is found.If "name"
  *   starts with a directory or the search path is NULL, tsh should assume
- *   that "name" is the path name of an executable file 
+ *   that "name" is the path name of an executable file
  */
 static void
 eval(const char *cmdline)
@@ -473,7 +473,7 @@ eval(const char *cmdline)
                        getjobpid(jobs, childPID)->cmdline);
         // Reset the mask.
         Sigprocmask(SIG_SETMASK, &prev_one, NULL);
-        free(executeable_path); // dont need this anymore 
+        free(executeable_path); // dont need this anymore
 
         // Wait on a foreground process (waitfg will just pass if we spawn a bg)
         waitfg(childPID);
@@ -553,12 +553,12 @@ parseline(const char *cmdline, char **argv)
  *  it immediately.
  *
  * Requires:
- *   argv consists of a name followed by zero or more arguments, where name 
+ *   argv consists of a name followed by zero or more arguments, where name
  *   is a built-in command supported by tsh - quit, jobs, bg or fg.
  *
  * Effects:
- *   Returns true if the first element of argv is a built-in command, and 
- *   performs the appropriate command, returns false otherwise.  
+ *   Returns true if the first element of argv is a built-in command, and
+ *   performs the appropriate command, returns false otherwise.
  *
  * Note:
  *   In the textbook, this function has the return type "int", but "bool"
@@ -574,7 +574,7 @@ builtin_cmd(char **argv)
         // Exit normally on a quit.
         if (strcmp(argv[0], "quit") == 0) {
                 exit(0);
-        } 
+        }
         // List the jobs and return that we found a builtin.
         else if (strcmp(argv[0], "jobs") == 0) {
                 listjobs(jobs);
@@ -597,14 +597,15 @@ builtin_cmd(char **argv)
  *    a valid PID or JID of a job.
  *
  * Effects:
- *   Sends a SIGCONT signal to the job and runs the job in the foreground if 
+ *   Sends a SIGCONT signal to the job and runs the job in the foreground if
  *   the command is "fg", or background if the command is "bg".
  */
 static void
 do_bgfg(char **argv)
 {
         // Get the pid from argv[1] (can either be a jid or pid).
-        pid_t pid = atoi(argv[1]);;
+        pid_t pid = atoi(argv[1]);
+        ;
         if (argv[1][0] == '%')
                 pid = getjobjid(jobs, atoi(&argv[1][1]))->pid;
         else
@@ -618,7 +619,7 @@ do_bgfg(char **argv)
                 getjobpid(jobs, pid)->state = BG;
 
         }
-        // If the command is fg, send a continue and put it in the foreground. 
+        // If the command is fg, send a continue and put it in the foreground.
         else if (strcmp(argv[0], "fg") == 0) {
                 Kill(pid, SIGCONT);
                 getjobpid(jobs, pid)->state = FG;
@@ -626,15 +627,15 @@ do_bgfg(char **argv)
         }
 }
 
-/* 
+/*
  * waitfg - Block until process pid is no longer the foreground process.
  *
  * Requires:
  *   The given pid is a valid pid of a foreground process.
  *
  * Effects:
- *   Waits for the foreground process to complete while the process is still 
- *   running in the foreground by blocking the shell. 
+ *   Waits for the foreground process to complete while the process is still
+ *   running in the foreground by blocking the shell.
  */
 static void
 waitfg(pid_t pid)
@@ -656,20 +657,23 @@ waitfg(pid_t pid)
  *   "pathstr" is a valid search path.
  *
  * Effects:
- *   Creates an array of strings by splitting the search path, where each entry 
- *   in the array is a directory in the search path, pathstr. 
+ *   Creates an array of strings by splitting the search path, where each entry
+ *   in the array is a directory in the search path, pathstr.
  */
 static void
 initpath(const char *pathstr)
 {
+        // count how many directories exist by the amount of colons that exist+1
         int colons = 0;
         for (unsigned int i = 0; i < strlen(pathstr); ++i) {
                 if (pathstr[i] == ':')
                         ++colons;
         }
-
+        // Number of paths is one more than the number of colons.
         pathDirs = Malloc(sizeof *pathDirs * (colons + 1));
         pathDirsLen = colons + 1;
+
+        // Use strtok to split the string on colons and add to the dir list.
         char *tok = strtok((char *)pathstr, ":");
         for (int i = 0; i < pathDirsLen; ++i) {
                 if (tok == NULL) {
@@ -679,7 +683,6 @@ initpath(const char *pathstr)
                 pathDirs[i] = tok;
                 tok = strtok(NULL, ":");
         }
-        // pathDirsLen = pos;
 }
 
 /*
@@ -702,25 +705,23 @@ initpath(const char *pathstr)
 static void
 sigchld_handler(int signum)
 {
+        // Prevent an "unused parameter" warning.
         (void)signum;
         int olderrno = errno;
-        // errno = ECHILD;
-        // sigset_t mask_all, prev_all;
+
+        // Declare information varialbes.
         pid_t pid;
         int status;
-        // sigfillset(&mask_all);
-        // while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) { /* Reap a zombie
-        // child */
+
+        // Check for tasks that need to be reaped or stopped but don't hang.
         while ((pid = waitpid(-1, &status, WUNTRACED | WNOHANG)) >
                0) { /* Reap a zombie child */
-                // TODO: CHWCK FOR WIFESTOPPED OR EXITED OR WHATEVS
-                // if stopped update status
-                // if terminated remove it
-                // sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
+                // Just delete our reference to the job on normal exit.
                 if (WIFEXITED(status)) {
                         deletejob(jobs,
                                   pid); /* Delete the child from the job list */
                 }
+                // Print message on abnormal exit and delte reference to job.
                 if (WIFSIGNALED(status)) {
                         Sio_puts("Job [");
                         Sio_putl(pid2jid(pid));
@@ -732,6 +733,7 @@ sigchld_handler(int signum)
                         deletejob(jobs,
                                   pid); /* Delete the child from the job list */
                 }
+                // Print message and update job status to stopped.
                 if (WIFSTOPPED(status)) {
                         Sio_puts("Job [");
                         Sio_putl(pid2jid(pid));
@@ -743,13 +745,8 @@ sigchld_handler(int signum)
                         JobP stoppedJob = getjobpid(jobs, pid);
                         stoppedJob->state = ST;
                 }
-                // sigprocmask(SIG_SETMASK, &prev_all, NULL);
                 status = 0;
         }
-        // if (errno != ECHILD) {
-        // 	Sio_error("waitpid error");
-
-        // }
         errno = olderrno;
 }
 
@@ -771,6 +768,7 @@ sigint_handler(int signum)
 
         // Prevent an "unused parameter" warning.
         (void)signum;
+        // Kill all tasks in the forground group if it exists.
         int pid;
         if ((pid = -fgpid(jobs)) != 0) {
                 Kill(pid, SIGINT);
@@ -787,7 +785,7 @@ sigint_handler(int signum)
  *
  * Effects:
  *   Sends a SIGTSTP signal to every process in the foreground process group,
- *   which suspepends the foreground job. 
+ *   which suspepends the foreground job.
  */
 static void
 sigtstp_handler(int signum)
@@ -796,6 +794,7 @@ sigtstp_handler(int signum)
         // Prevent an "unused parameter" warning.
         (void)signum;
         int pid;
+        // Stop all tasks in the forground group if it exists.
         if ((pid = -fgpid(jobs)) != 0) {
                 Kill(pid, SIGTSTP);
         }
