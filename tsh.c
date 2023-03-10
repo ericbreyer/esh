@@ -710,10 +710,12 @@ initpath(const char *pathstr)
  *  currently running children to terminate.
  *
  * Requires:
- *   <to be filled in by the student(s)>
+ *   "signum" is SIGCHLD
  *
  * Effects:
- *   <to be filled in by the student(s)>
+ *   Reaps the zombie children by finding the child processes that have 
+ *   changed state, then deleting the job entry if the process exited 
+ *   normally. Prints message if the child process exited abnormally. 
  */
 static void
 sigchld_handler(int signum)
@@ -734,7 +736,7 @@ sigchld_handler(int signum)
                         deletejob(jobs,
                                   pid); /* Delete the child from the job list */
                 }
-                // Print message on abnormal exit and delte reference to job.
+                // Print message on abnormal exit and delete reference to job.
                 if (WIFSIGNALED(status)) {
                         Sio_puts("Job [");
                         Sio_putl(pid2jid(pid));
