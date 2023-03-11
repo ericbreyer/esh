@@ -5,21 +5,21 @@ Aditi Raju, ar139 & Eric Breyer, eab17
 
 TESTING STRATEGY
 
-Test: Empty strings in the search path
+Test 1: Empty strings in the search path
 Make sure that an empty search path, a path with colons at the begining or end, 
 or a path with two consecutive colons will treat these empty strings as "./"
 (the current directory). This tests the part of our code that does that.
 
-Test: Empty command line argument
-Make sure the shell dosent segfault on an empty argument. Tests the eval/builtin
-functions for this.
+Test 2: Empty command line argument
+Make sure the shell doesn't segfault on an empty argument. Tests the 
+eval/builtin functions for this.
 
-Test: Invalid command/file
+Test 3: Invalid command/file
 make it print "<argv[0]>: Command not found." if it cant find an executable or
 valid builtin. Tests the part of eval that checks for this.
 
-Test: Invalid pid/jid input to bg/fg
+Test 4: Invalid pid/jid input to bg/fg
 Make sure these builtins print the right output on invalid inputs.
 
-Test: non numeric pid/jid to bg/fg
+Test 5: non numeric pid/jid to bg/fg
 Make sure these builtins print the right output on invalid inputs.
