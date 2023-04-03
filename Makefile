@@ -5,15 +5,16 @@ TSH = ./tsh
 TSHREF = ./tshref
 TSHARGS = "-p"
 CC = cc
-CFLAGS = -std=gnu11 -Werror -Wall -Wextra -O2 -g
+CFLAGS = -std=gnu11 -Werror -Wall -Wextra -g
 FILES = $(TSH) ./myspin ./mysplit ./mystop ./myint
 
 all: $(FILES)
 
-$(TSH): tsh.o
-	$(CC) $(CFLAGS) -o $(TSH) tsh.o
+$(TSH): tsh.o ./circularBuffer/ringBuffer.o
+	$(CC) $(CFLAGS) -o $(TSH) ./tsh.o ./circularBuffer/ringBuffer.o
 
 tsh.o: tsh.c
+./circularBuffer/ringBuffer.o: ./circularBuffer/ringBuffer.c
 
 ##################
 # Regression tests

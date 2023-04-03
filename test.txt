@@ -1,0 +1,4 @@
+./myspin 5 &
+/bin/echo "hi" > bruh.txt
+/bin/ls
+[A

@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "ringbuffer.h": "c",
+        "ncurses.h": "c"
+    }
+}
